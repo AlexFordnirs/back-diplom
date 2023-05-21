@@ -1,34 +1,67 @@
-const Movie = require('../models/User');
-
+const User = require('../models/User');
+const bcrypt = require("bcryptjs");
 const handleError = (res, error) => {
     res.status(500).json({ error });
 }
 
 const getUsers = (req, res) => {
-    Movie
+    User
         .find()
         .sort({ title: 1 })
-        .then((movies) => {
+        .then((Users) => {
             res
                 .status(200)
-                .json(movies);
+                .json(Users);
         })
         .catch((err) => handleError(res, err));
 };
 
+const getLoginUser = async (req, res) => {
+
+    try {
+        const user = await User.findOne({ login: req.body.login });
+        if (user) {
+            const result = await bcrypt.compare(req.body.password, user.password);
+            if (result) {
+                res
+                    .status(200)
+                    .json(true);
+            } else {
+                res.status(400).json({ error: "password doesn't match" });
+            }
+        } else {
+            res.status(400).json({ error: "User doesn't exist" });
+        }
+    } catch (error) {
+        res.status(400).json({ error });
+    }
+};
+const addNewRegistration = async (req, res) => {
+    try {
+
+        req.body.password = await bcrypt.hash(req.body.password, 10);
+
+        const user = await User.create(req.body);
+
+        res.json(user);
+    } catch (error) {
+        res.status(400).json({ error });
+    }
+};
+
 const getUser = (req, res) => {
-    Movie
+    User
         .findById(req.params.id)
-        .then((movie) => {
+        .then((User) => {
             res
                 .status(200)
-                .json(movie);
+                .json(User);
         })
         .catch((err) => handleError(res, err));
 };
 
 const deleteUser = (req, res) => {
-    Movie
+    User
         .findByIdAndDelete(req.params.id)
         .then((result) => {
             res
@@ -38,9 +71,10 @@ const deleteUser = (req, res) => {
         .catch((err) => handleError(res, err));
 };
 
-const addUser = (req, res) => {
-    const movie = new Movie(req.body);
-    movie
+const addUser = async (req, res) => {
+    req.body.password = await bcrypt.hash(req.body.password, 10);
+    const user = new User(req.body);
+    user
         .save()
         .then((result) => {
             res
@@ -50,8 +84,8 @@ const addUser = (req, res) => {
         .catch((err) => handleError(res, err));
 };
 
-const updateUser = (req, res) => {
-    Movie
+const updateUser =  (req, res) => {
+    User
         .findByIdAndUpdate(req.params.id, req.body)
         .then((result) => {
             res
@@ -61,10 +95,27 @@ const updateUser = (req, res) => {
         .catch((err) => handleError(res, err));
 };
 
+const addHistoriUser = async (req, res) => {
+    var objFriends =req.body;
+    console.log(objFriends)
+    User.findOneAndUpdate(
+        { _id: req.params.id },
+        { $push: { user_History: objFriends} })
+        .then((result) => {
+        res
+            .status(200)
+            .json(result);
+    })
+        .catch((err) => handleError(res, err));
+};
+
 module.exports = {
     getUsers,
     getUser,
     deleteUser,
     addUser,
     updateUser,
+    getLoginUser,
+    addNewRegistration,
+    addHistoriUser
 };
